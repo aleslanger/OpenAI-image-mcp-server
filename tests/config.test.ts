@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, it, expect } from "vitest";
 import { loadConfig } from "../src/config.js";
 
 describe("loadConfig", () => {
@@ -31,5 +34,54 @@ describe("loadConfig", () => {
     expect(c.maxImagesPerCall).toBe(5);
     expect(c.maxCostPerCallUsd).toBe(0.5);
     expect(c.confirmAboveN).toBe(3);
+  });
+});
+
+describe("loadConfig with OPENAI_API_KEY_FILE", () => {
+  let dir: string | undefined;
+
+  afterEach(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+    dir = undefined;
+  });
+
+  const writeKeyFile = (content: string): string => {
+    dir = mkdtempSync(join(tmpdir(), "openai-image-mcp-test-"));
+    const file = join(dir, "api_key");
+    writeFileSync(file, content, { mode: 0o600 });
+    return file;
+  };
+
+  it("reads api key from file", () => {
+    const file = writeKeyFile("sk-from-file\n");
+    const c = loadConfig({ OPENAI_API_KEY_FILE: file });
+    expect(c.apiKey).toBe("sk-from-file");
+  });
+
+  it("prefers OPENAI_API_KEY over file", () => {
+    const file = writeKeyFile("sk-from-file");
+    const c = loadConfig({ OPENAI_API_KEY: "sk-direct", OPENAI_API_KEY_FILE: file });
+    expect(c.apiKey).toBe("sk-direct");
+  });
+
+  it("trims direct OPENAI_API_KEY and falls back to file when it is blank", () => {
+    const file = writeKeyFile("sk-from-file");
+    expect(loadConfig({ OPENAI_API_KEY: " sk-direct \n" }).apiKey).toBe("sk-direct");
+    expect(
+      loadConfig({ OPENAI_API_KEY: "   ", OPENAI_API_KEY_FILE: file }).apiKey,
+    ).toBe("sk-from-file");
+  });
+
+  it("throws when key file is missing", () => {
+    expect(() =>
+      loadConfig({ OPENAI_API_KEY_FILE: "/nonexistent/api_key" }),
+    ).toThrow(/OPENAI_API_KEY_FILE/);
+  });
+
+  it("throws when key file is empty", () => {
+    const file = writeKeyFile("   \n");
+    expect(() => loadConfig({ OPENAI_API_KEY_FILE: file })).toThrow(
+      /OPENAI_API_KEY_FILE/,
+    );
   });
 });

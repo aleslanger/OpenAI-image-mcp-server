@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { LogLevel } from "./logger.js";
@@ -28,10 +29,30 @@ const num = (v: string | undefined, d: number) =>
 const optNum = (v: string | undefined) =>
   v === undefined ? undefined : Number(v);
 
+function resolveApiKey(env: NodeJS.ProcessEnv): string {
+  const direct = env.OPENAI_API_KEY?.trim();
+  if (direct) return direct;
+  if (env.OPENAI_API_KEY_FILE) {
+    let raw: string;
+    try {
+      raw = fs.readFileSync(env.OPENAI_API_KEY_FILE, "utf8");
+    } catch (e) {
+      throw new Error(
+        `OPENAI_API_KEY_FILE is not readable: ${env.OPENAI_API_KEY_FILE} (${e instanceof Error ? e.message : String(e)})`,
+      );
+    }
+    const key = raw.trim();
+    if (!key) {
+      throw new Error(`OPENAI_API_KEY_FILE is empty: ${env.OPENAI_API_KEY_FILE}`);
+    }
+    return key;
+  }
+  throw new Error("OPENAI_API_KEY is required");
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
-  if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is required");
   return {
-    apiKey: env.OPENAI_API_KEY,
+    apiKey: resolveApiKey(env),
     baseUrl: env.OPENAI_BASE_URL,
     outputDir: env.IMAGE_OUTPUT_DIR ?? path.join(os.homedir(), "Pictures", "openai-image-mcp"),
     defaultModel: env.DEFAULT_MODEL ?? "gpt-image-2",

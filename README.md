@@ -57,13 +57,16 @@ The server writes the file under `IMAGE_OUTPUT_DIR` and returns the path.
 
 | Var | Required | Default | Purpose |
 |-----|----------|---------|---------|
-| `OPENAI_API_KEY` | **yes** | — | OpenAI API key |
+| `OPENAI_API_KEY` | **yes**¹ | — | OpenAI API key |
+| `OPENAI_API_KEY_FILE` | **yes**¹ | — | path to a file containing the API key (trailing whitespace trimmed); used when `OPENAI_API_KEY` is unset |
 | `IMAGE_OUTPUT_DIR` | no | `~/Pictures/openai-image-mcp` | where images are saved |
 | `DEFAULT_MODEL` | no | `gpt-image-2` | gpt-image-1 / gpt-image-1-mini / gpt-image-2 |
 | `DEFAULT_OUTPUT_MODE` | no | `path` | `path` \| `base64` \| `both` |
 | `MAX_COST_PER_CALL_USD` | no | — | reject a call whose estimate exceeds this |
 | `CONFIRM_ABOVE_N` | no | — | require `confirm:true` when generating more than N images |
 | `ALLOW_URL_INPUT` | no | `false` | allow image inputs given as URLs (see Security) |
+
+¹ Exactly one of `OPENAI_API_KEY` or `OPENAI_API_KEY_FILE` is required. Prefer `OPENAI_API_KEY_FILE` pointing to a `chmod 600` file so the key does not live in client config files.
 | `SPEND_LOG_PATH` | no | — | append per-call cost records as JSONL |
 | `PROMPT_ENHANCE` | no | `false` | locally augment short prompts (no extra LLM call) |
 | `OPENAI_BASE_URL` | no | — | override API base URL |
